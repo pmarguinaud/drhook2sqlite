@@ -81,8 +81,17 @@ my $db = shift;
 
 die unless ($db);
 
-my @drhook = @ARGV;
+my @drhook;
 
+if ((scalar (@ARGV) == 1) && (-d $ARGV[0]))
+  {
+    @drhook = <$ARGV[0]/drhook.prof.*>;
+  }
+else
+  {
+    @drhook = @ARGV;
+  }
+  
 unlink ($db);
 
 my $dbh = 'DBI'->connect ("DBI:SQLite:$db", '', '', {RaiseError => 1})
@@ -107,7 +116,7 @@ EOF
 
 $dbh->prepare ("BEGIN TRANSACTION")->execute ();
 
-for my $f (@ARGV)
+for my $f (@drhook)
   {
     &drHook2SQLite ($f, $dbh);
   }
