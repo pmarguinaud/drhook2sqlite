@@ -77,11 +77,15 @@ sub drHook2SQLite
 
 }
 
+my $db = shift;
+
+die unless ($db);
+
 my @drhook = @ARGV;
 
-unlink ('drhook.db');
+unlink ($db);
 
-my $dbh = 'DBI'->connect ("DBI:SQLite:drhook.db", '', '', {RaiseError => 1})
+my $dbh = 'DBI'->connect ("DBI:SQLite:$db", '', '', {RaiseError => 1})
   or die ($DBI::errstr);
 $dbh->{RaiseError} = 1;
 
