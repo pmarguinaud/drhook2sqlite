@@ -53,7 +53,7 @@ sub drHook2SQLite
 
 
   my $set = $dbh->prepare ("INSERT INTO DrHookTime (Rank, Time, Cumul, Self, Total, "
-                         . "Calls, SelfPerlCall, TotalPerlCall, Name, Thread, Task) "
+                         . "Calls, SelfPerCall, TotalPerCall, Name, Thread, Task) "
                          . "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
 
   for my $line (@line)
@@ -61,7 +61,7 @@ sub drHook2SQLite
       chomp ($line);
 
       $line =~ s/^\s*(\S+)\s+(\S+)\s+(\S+)\s+(\S+)\s+(\S+)\s+(\S+)\s+(\S+)\s+(\S+)\s+//go;
-      my ($Rank, $Time, $Cumul, $Self, $Total, $Calls, $SelfPerlCall, $TotalPerlCall) = ($1, $2, $3, $4, $5, $6, $7, $8);
+      my ($Rank, $Time, $Cumul, $Self, $Total, $Calls, $SelfPerCall, $TotalPerCall) = ($1, $2, $3, $4, $5, $6, $7, $8);
 
 
       $line =~ s/^\*//o;
@@ -72,7 +72,7 @@ sub drHook2SQLite
           ($Name, $Thread) = ($line, 1);
         }
 
-      $set->execute ($Rank, $Time, $Cumul, $Self, $Total, $Calls, $SelfPerlCall, $TotalPerlCall, $Name, $Thread, $Task);
+      $set->execute ($Rank, $Time, $Cumul, $Self, $Total, $Calls, $SelfPerCall, $TotalPerCall, $Name, $Thread, $Task);
     }
 
 }
@@ -106,8 +106,8 @@ CREATE TABLE DrHookTime
     Self            FLOAT         NOT NULL,
     Total           FLOAT         NOT NULL,
     Calls           INT           NOT NULL,
-    SelfPerlCall    FLOAT         NOT NULL,
-    TotalPerlCall   FLOAT         NOT NULL,
+    SelfPerCall     FLOAT         NOT NULL,
+    TotalPerCall    FLOAT         NOT NULL,
     Name            VARCHAR (255) NOT NULL,
     Thread          INT           NOT NULL,
     Task            INT           NOT NULL,

@@ -9,6 +9,8 @@ use Term::ANSIColor;
 use warnings qw (FATAL all);
 use strict;
 
+my $tty = -t STDOUT;
+
 my ($db2, $db1, $Kind, $Limit) = @ARGV;
 
 $Kind ||= 'Self';
@@ -21,11 +23,15 @@ $dbh->{RaiseError} = 1;
 $dbh->do ("ATTACH \"$db1\" AS db1;");
 $dbh->do ("ATTACH \"$db2\" AS db2;");
 
-my $sth = $dbh->prepare ("SELECT db1.DrHookTime_Merge$Kind.Name, db1.DrHookTime_Merge$Kind.Avg AS Avg1, db2.DrHookTime_Merge$Kind.Avg AS Avg2,
-                           db2.DrHookTime_Merge$Kind.Avg - db1.DrHookTime_Merge$Kind.Avg AS AvgDiff FROM 
-                           db1.DrHookTime_Merge$Kind, db2.DrHookTime_Merge$Kind WHERE db1.DrHookTime_Merge$Kind.Name = db2.DrHookTime_Merge$Kind.Name 
-                           AND db2.DrHookTime_Merge$Kind.Avg - db1.DrHookTime_Merge$Kind.Avg != 0
-                           ORDER BY ABS (db1.DrHookTime_Merge$Kind.Avg-db2.DrHookTime_Merge$Kind.Avg) DESC LIMIT $Limit;");
+my $query = "SELECT db1.DrHookTime_Merge$Kind.Name, db1.DrHookTime_Merge$Kind.Avg AS Avg1, db2.DrHookTime_Merge$Kind.Avg AS Avg2,
+              db2.DrHookTime_Merge$Kind.Avg - db1.DrHookTime_Merge$Kind.Avg AS AvgDiff FROM 
+              db1.DrHookTime_Merge$Kind, db2.DrHookTime_Merge$Kind WHERE db1.DrHookTime_Merge$Kind.Name = db2.DrHookTime_Merge$Kind.Name 
+              AND db2.DrHookTime_Merge$Kind.Avg - db1.DrHookTime_Merge$Kind.Avg != 0
+              ORDER BY ABS (db1.DrHookTime_Merge$Kind.Avg-db2.DrHookTime_Merge$Kind.Avg) DESC LIMIT $Limit;";
+
+die ($query);
+
+my $sth = $dbh->prepare ($query);
 
 $sth->execute ();
 
@@ -41,7 +47,7 @@ while (my $h = $sth->fetchrow_hashref ())
       {
         my $FLD = $FLD[$i];
         my $str = sprintf ("$FMT{$FLD}", $h->{$FLD});
-        $str = $COL{$FLD} ? $COL{$FLD}->($h->{$FLD}, $str) : $str;
+        $str = $tty && $COL{$FLD} ? $COL{$FLD}->($h->{$FLD}, $str) : $str;
         $str = " | $str";
         print $str;
         printf (" |\n") if ($i == $#FLD);

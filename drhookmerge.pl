@@ -21,7 +21,7 @@ $dbh->prepare ("SELECT LOAD_EXTENSION ('./libsqlitefunctions.so')")->execute ();
 
 $dbh->prepare ("BEGIN TRANSACTION")->execute ();
 
-for my $Kind (qw (Self Total))
+for my $Kind (qw (Self Total TotalPerCall SelfPerCall))
   {
     for my $stmt 
     (
