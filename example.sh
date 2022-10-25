@@ -9,3 +9,8 @@ do
   ./drhook2sqlite.pl $pack.db example/$pack
   ./drhookmerge.pl $pack.db
 done
+
+./drhookdiff.pl \
+  cy48t3_main+fypp.01.MIMPIIFC1905.2y.pack.db \
+  cy48t3_cpg_drv+list_gfl.01.MIMPIIFC1905.2y.pack.db \
+  Self 200
