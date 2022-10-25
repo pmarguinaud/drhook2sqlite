@@ -4,6 +4,8 @@ use DBI;
 use DBD::SQLite;
 use Data::Dumper;
 use FileHandle;
+use FindBin qw ($Bin);
+
 use warnings qw (FATAL all);
 use strict;
 
@@ -17,7 +19,7 @@ $dbh->{RaiseError} = 1;
 
 
 $dbh->sqlite_enable_load_extension (1);
-$dbh->prepare ("SELECT LOAD_EXTENSION ('./libsqlitefunctions.so')")->execute ();
+$dbh->prepare ("SELECT LOAD_EXTENSION ('$Bin/libsqlitefunctions.so')")->execute ();
 
 $dbh->prepare ("BEGIN TRANSACTION")->execute ();
 
