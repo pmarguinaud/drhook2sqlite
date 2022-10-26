@@ -3,12 +3,15 @@
 set -x
 
 
-for pack in cy48t3_main+fypp.01.MIMPIIFC1905.2y.pack cy48t3_cpg_drv+list_gfl.01.MIMPIIFC1905.2y.pack
+for run in example/*
 do
-  \rm $pack.db
-  ./drhook2sqlite.pl $pack.db example/$pack
-  ./drhookmerge.pl $pack.db
+  run=$(basename $run)
+  \rm $run.db
+  ./drhook2sqlite.pl $run.db example/$run
+  ./drhookmerge.pl $run.db
 done
+
+exit
 
 ./drhookdiff.pl \
   cy48t3_main+fypp.01.MIMPIIFC1905.2y.pack.db \

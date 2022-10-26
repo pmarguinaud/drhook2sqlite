@@ -29,8 +29,8 @@ $dbh->{RaiseError} = 1;
 $dbh->do ("ATTACH \"$db1\" AS db1;");
 $dbh->do ("ATTACH \"$db2\" AS db2;");
 
-my $MATCH = $opts{match} ? "AND db1.DrHookTime_Merge$opts{kind}.Name REGEXP '$opts{match}'" : "";
-my $WHERE = $opts{where} ? "AND $opts{where}" : "";
+my $MATCH = $opts{match} ? "AND (db1.DrHookTime_Merge$opts{kind}.Name REGEXP '$opts{match}')" : "";
+my $WHERE = $opts{where} ? "AND ($opts{where})" : "";
 
 my $query = "SELECT 
               db1.DrHookTime_Merge$opts{kind}.Name                                         AS Name, 
@@ -42,8 +42,8 @@ my $query = "SELECT
             / db1.DrHookTime_Merge$opts{kind}.Avg ELSE 1000 END                            AS AvgIncr
             FROM 
               db1.DrHookTime_Merge$opts{kind}, db2.DrHookTime_Merge$opts{kind} 
-            WHERE db1.DrHookTime_Merge$opts{kind}.Name = db2.DrHookTime_Merge$opts{kind}.Name 
-              AND db2.DrHookTime_Merge$opts{kind}.Avg != db1.DrHookTime_Merge$opts{kind}.Avg 
+            WHERE (db1.DrHookTime_Merge$opts{kind}.Name = db2.DrHookTime_Merge$opts{kind}.Name)
+              AND (db2.DrHookTime_Merge$opts{kind}.Avg != db1.DrHookTime_Merge$opts{kind}.Avg )
               $MATCH $WHERE
             ORDER BY ABS (db1.DrHookTime_Merge$opts{kind}.Avg-db2.DrHookTime_Merge$opts{kind}.Avg) DESC LIMIT $opts{limit};";
 

@@ -31,21 +31,25 @@ my @i = (0 .. $#db);
 my @dn = map { "db$_" } @i;
 my %dn;
 @dn{@db} = @dn;
-my @avg = map { "Avg$_" } @i;
+my @avg = map { "Avg$_" } @i;
 
 for my $db (@db) 
   {
     $dbh->do ("ATTACH \"$db\" AS $dn{$db};");
   }
 
-my $MATCH = $opts{match} ? "AND db1.DrHookTime_Merge$opts{kind}.Name REGEXP '$opts{match}'" : "";
-my $WHERE = $opts{where} ? "AND $opts{where}" : "";
+my $MATCH = $opts{match} ? "AND (db1.DrHookTime_Merge$opts{kind}.Name REGEXP '$opts{match}')" : "";
+my $WHERE = $opts{where} ? "AND ($opts{where})" : "";
 
-my $query = "SELECT db1.DrHookTime_Merge$opts{kind}.Name AS Name, "
-            . join (', ', map ({ "$dn[$_].DrHookTime_Merge$opts{kind}.Avg AS $avg[$_]" } @i))
-            . " FROM " . join (', ', map ({ "$dn[$i].DrHookTime_Merge$opts{kind}" } @i))
-            . " WHERE " . join (' OR ', map ({ my $i = $_; map ({ my $j = $_; "$dn[$i].DrHookTime_Merge$opts{kind}.Avg != $dn[$j].DrHookTime_Merge$opts{kind}.Avg" } (0 .. $i-1)) } @i))
+my $query = "SELECT db0.DrHookTime_Merge$opts{kind}.Name AS Name, "
+            . join (', ', map ({ "$dn[$_].DrHookTime_Merge$opts{kind}.Avg AS $avg[$_]" } @i))
+            . " FROM " . join (', ', map ({ "$dn[$_].DrHookTime_Merge$opts{kind}" } @i))
+            . " WHERE " 
+            . '('. join (' OR ', map ({ my $i = $_; map ({ my $j = $_; "$dn[$i].DrHookTime_Merge$opts{kind}.Avg != $dn[$j].DrHookTime_Merge$opts{kind}.Avg" } (0 .. $i-1)) } @i)) . ')'
+            . " AND "
+            . '(' . join (' AND ', map ({ "$dn[$_].DrHookTime_Merge$opts{kind}.Name = $dn[$_+1].DrHookTime_Merge$opts{kind}.Name" } @i[0..$#i-1])) . ')'
             . " $MATCH $WHERE LIMIT $opts{limit};";
+
 
 my $sth = $dbh->prepare ($query);
 
@@ -55,6 +59,14 @@ my @FLD = ('Name', @avg);
 my (%FMT, %HDR);
 @FMT{@FLD} = ('%-40s', ('%12.5f') x scalar (@avg));
 @HDR{@FLD} = ('%-40s', ('%12s') x scalar (@avg));
+
+
+print "\n";
+for my $i (@i)
+  {
+    printf ("%-10s: %s\n", $avg[$i], $db[$i]);
+  }
+print "\n";
 
 for my $i (0 .. $#FLD)
   {
