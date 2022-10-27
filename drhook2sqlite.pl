@@ -126,3 +126,8 @@ $dbh->prepare ("COMMIT")->execute ();
 $dbh->prepare ("CREATE INDEX DrHookTimeIdx ON DrHookTime (Name, Thread, Task);")->execute ();
 
 
+# Per calls figures have too few digits
+
+$dbh->do ("UPDATE DrHookTime SET SelfPerCall = 1000 * Self/Calls, TotalPerCall = 1000 * Total/Calls;");
+
+
