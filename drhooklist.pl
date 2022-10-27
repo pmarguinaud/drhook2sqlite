@@ -31,7 +31,7 @@ my @i = (0 .. $#db);
 my @dn = map { "db$_" } @i;
 my %dn;
 @dn{@db} = @dn;
-my @avg = map { "Avg$_" } @i;
+my @key = map { "$opts{kind}$_" } @i;
 
 for my $db (@db) 
   {
@@ -42,29 +42,31 @@ my $MATCH = $opts{match} ? "AND (db1.DrHookTime_Merge$opts{kind}.Name REGEXP '$o
 my $WHERE = $opts{where} ? "AND ($opts{where})" : "";
 
 my $query = "SELECT db0.DrHookTime_Merge$opts{kind}.Name AS Name, "
-            . join (', ', map ({ "$dn[$_].DrHookTime_Merge$opts{kind}.Avg AS $avg[$_]" } @i))
-            . " FROM " . join (', ', map ({ "$dn[$_].DrHookTime_Merge$opts{kind}" } @i))
-            . " WHERE " 
-            . '('. join (' OR ', map ({ my $i = $_; map ({ my $j = $_; "$dn[$i].DrHookTime_Merge$opts{kind}.Avg != $dn[$j].DrHookTime_Merge$opts{kind}.Avg" } (0 .. $i-1)) } @i)) . ')'
-            . " AND "
-            . '(' . join (' AND ', map ({ "$dn[$_].DrHookTime_Merge$opts{kind}.Name = $dn[$_+1].DrHookTime_Merge$opts{kind}.Name" } @i[0..$#i-1])) . ')'
-            . " $MATCH $WHERE LIMIT $opts{limit};";
+  . join (', ', map ({ "$dn[$_].DrHookTime_Merge$opts{kind}.avg AS $key[$_]" } @i))
+  . " FROM " . join (', ', map ({ "$dn[$_].DrHookTime_Merge$opts{kind}" } @i))
+  . " WHERE " 
+  . '('. join (' OR ', map ({ my $i = $_; map ({ my $j = $_; "$dn[$i].DrHookTime_Merge$opts{kind}.Avg != "
+                                                           . "$dn[$j].DrHookTime_Merge$opts{kind}.Avg" } (0 .. $i-1)) } @i)) . ')'
+  . " AND "
+  . '(' . join (' AND ', map ({ "$dn[$_].DrHookTime_Merge$opts{kind}.Name = "
+                              . "$dn[$_+1].DrHookTime_Merge$opts{kind}.Name" } @i[0..$#i-1])) . ')'
+  . " $MATCH $WHERE LIMIT $opts{limit};";
 
 
 my $sth = $dbh->prepare ($query);
 
 $sth->execute ();
 
-my @FLD = ('Name', @avg);
+my @FLD = ('Name', @key);
 my (%FMT, %HDR);
-@FMT{@FLD} = ('%-40s', ('%12.5f') x scalar (@avg));
-@HDR{@FLD} = ('%-40s', ('%12s') x scalar (@avg));
+@FMT{@FLD} = ('%-40s', ('%12.5f') x scalar (@key));
+@HDR{@FLD} = ('%-40s', ('%12s') x scalar (@key));
 
 
 print "\n";
 for my $i (@i)
   {
-    printf ("%-10s: %s\n", $avg[$i], $db[$i]);
+    printf ("%-10s: %s\n", $key[$i], $db[$i]);
   }
 print "\n";
 
