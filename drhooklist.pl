@@ -12,8 +12,8 @@ use strict;
 
 my $tty = -t STDOUT;
 
-my @opts_s = qw (kind limit match where);
-my %opts = qw (kind Self limit 1000);
+my @opts_s = qw (kind limit match where format);
+my %opts = qw (kind Self limit 1000 format text);
 
 &GetOptions
 (
@@ -62,31 +62,63 @@ my (%FMT, %HDR);
 @FMT{@FLD} = ('%-40s', ('%12.5f') x scalar (@key));
 @HDR{@FLD} = ('%-40s', ('%12s') x scalar (@key));
 
-
-print "\n";
-for my $i (@i)
+if ($opts{format} eq 'text')
   {
-    printf ("%-10s: %s\n", $key[$i], $db[$i]);
-  }
-print "\n";
-
-for my $i (0 .. $#FLD)
-  {
-    my $FLD = $FLD[$i];
-    my $str = sprintf ("$HDR{$FLD}", $FLD);
-    $str = " | $str";
-    print $str;
-    printf (" |\n") if ($i == $#FLD);
-  }
-
-while (my $h = $sth->fetchrow_hashref ())
-  {
+    print "\n";
+    for my $i (@i)
+      {
+        printf ("%-10s: %s\n", $key[$i], $db[$i]);
+      }
+    print "\n";
+    
     for my $i (0 .. $#FLD)
       {
         my $FLD = $FLD[$i];
-        my $str = sprintf ("$FMT{$FLD}", $h->{$FLD});
+        my $str = sprintf ($HDR{$FLD}, $FLD);
         $str = " | $str";
         print $str;
         printf (" |\n") if ($i == $#FLD);
+      }
+    
+    while (my $h = $sth->fetchrow_hashref ())
+      {
+        for my $i (0 .. $#FLD)
+          {
+            my $FLD = $FLD[$i];
+            my $str = sprintf ($FMT{$FLD}, $h->{$FLD});
+            $str = " | $str";
+            print $str;
+            printf (" |\n") if ($i == $#FLD);
+          }
+      }
+  }
+elsif ($opts{format} eq 'csv')
+  {
+    print ";\n";
+    for my $i (@i)
+      {
+        printf ("%-10s;%s;\n", $key[$i], $db[$i]);
+      }
+    print ";\n";
+    
+    for my $i (0 .. $#FLD)
+      {
+        my $FLD = $FLD[$i];
+        my $str = sprintf ($HDR{$FLD}, $FLD);
+        $str = "$str;";
+        print $str;
+        printf ("\n") if ($i == $#FLD);
+      }
+    
+    while (my $h = $sth->fetchrow_hashref ())
+      {
+        for my $i (0 .. $#FLD)
+          {
+            my $FLD = $FLD[$i];
+            my $str = sprintf ($FMT{$FLD}, $h->{$FLD});
+            $str = "$str;";
+            print $str;
+            printf ("\n") if ($i == $#FLD);
+          }
       }
   }
