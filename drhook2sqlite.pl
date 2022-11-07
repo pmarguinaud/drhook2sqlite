@@ -4,8 +4,11 @@ use DBI;
 use DBD::SQLite;
 use Data::Dumper;
 use FileHandle;
+use Getopt::Long;
 use warnings qw (FATAL all);
 use strict;
+
+my %opts;
 
 =pod
 
@@ -72,10 +75,28 @@ sub drHook2SQLite
           ($Name, $Thread) = ($line, 1);
         }
 
+      if ($opts{only})
+        {
+          next unless (grep { $Name eq $_ } @{ $opts{only} });
+        }
+
       $set->execute ($Rank, $Time, $Cumul, $Self, $Total, $Calls, $SelfPerCall, $TotalPerCall, $Name, $Thread, $Task);
     }
 
 }
+
+my @opts_s = qw (only);
+
+&GetOptions
+(
+  map ({ ("$_=s", \$opts{$_}) } @opts_s),
+);
+
+if ($opts{only})
+  {
+    $opts{only} = [split (m/,/o, $opts{only})];
+  }
+
 
 my $db = shift;
 
