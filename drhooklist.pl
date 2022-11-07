@@ -12,8 +12,8 @@ use strict;
 
 my $tty = -t STDOUT;
 
-my @opts_s = qw (kind limit match where format);
-my %opts = qw (kind Self limit 1000 format text);
+my @opts_s = qw (kind limit match where format order);
+my %opts = qw (kind Self limit 1000 format text order Name);
 
 &GetOptions
 (
@@ -50,7 +50,7 @@ my $query = "SELECT db0.DrHookTime_Merge$opts{kind}.Name AS Name, "
   . " AND "
   . '(' . join (' AND ', map ({ "$dn[$_].DrHookTime_Merge$opts{kind}.Name = "
                               . "$dn[$_+1].DrHookTime_Merge$opts{kind}.Name" } @i[0..$#i-1])) . ')'
-  . " $MATCH $WHERE LIMIT $opts{limit};";
+  . " $MATCH $WHERE ORDER BY $opts{order} LIMIT $opts{limit};";
 
 
 my $sth = $dbh->prepare ($query);
@@ -97,14 +97,16 @@ elsif ($opts{format} eq 'csv')
     print ";\n";
     for my $i (@i)
       {
-        printf ("%-10s;%s;\n", $key[$i], $db[$i]);
+        printf ("%s;%s;\n", $key[$i], $db[$i]);
       }
     print ";\n";
     
+    print ";;;";
     for my $i (0 .. $#FLD)
       {
         my $FLD = $FLD[$i];
         my $str = sprintf ($HDR{$FLD}, $FLD);
+        $str =~ s/(?:^\s*|\s*$)//go;
         $str = "$str;";
         print $str;
         printf ("\n") if ($i == $#FLD);
@@ -112,10 +114,12 @@ elsif ($opts{format} eq 'csv')
     
     while (my $h = $sth->fetchrow_hashref ())
       {
+        print ";;;";
         for my $i (0 .. $#FLD)
           {
             my $FLD = $FLD[$i];
             my $str = sprintf ($FMT{$FLD}, $h->{$FLD});
+            $str =~ s/(?:^\s*|\s*$)//go;
             $str = "$str;";
             print $str;
             printf ("\n") if ($i == $#FLD);
