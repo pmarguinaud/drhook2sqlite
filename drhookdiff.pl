@@ -36,6 +36,10 @@ my $query = "SELECT
               db1.DrHookTime_Merge$opts{kind}.Name                                         AS Name, 
               db1.DrHookTime_Merge$opts{kind}.Avg                                          AS Avg1, 
               db2.DrHookTime_Merge$opts{kind}.Avg                                          AS Avg2,
+              db1.DrHookTime_Merge$opts{kind}.Min                                          AS Min1, 
+              db2.DrHookTime_Merge$opts{kind}.Min                                          AS Min2,
+              db1.DrHookTime_Merge$opts{kind}.Max                                          AS Max1, 
+              db2.DrHookTime_Merge$opts{kind}.Max                                          AS Max2,
               db2.DrHookTime_Merge$opts{kind}.Avg - db1.DrHookTime_Merge$opts{kind}.Avg    AS AvgDiff,
               CASE WHEN db1.DrHookTime_Merge$opts{kind}.Avg > 0 THEN
               (db2.DrHookTime_Merge$opts{kind}.Avg - db1.DrHookTime_Merge$opts{kind}.Avg) * 100
@@ -51,10 +55,10 @@ my $sth = $dbh->prepare ($query);
 
 $sth->execute ();
 
-my @FLD = qw (Name Avg1 Avg2 AvgDiff AvgIncr);
+my @FLD = qw (Name Avg1 Min1 Max1 Avg2 Min2 Max2 AvgDiff AvgIncr);
 my (%FMT, %HDR);
-@FMT{@FLD} = (qw (%-40s %12.5f %12.5f %+12.5f), '%+12.5f%%');
-@HDR{@FLD} = qw (%-40s %12s %12s %12s %13s);
+@FMT{@FLD} = (qw (%-40s %12.5f %12.5f %12.5f %12.5f %12.5f %12.5f %+12.5f), '%+12.5f%%');
+@HDR{@FLD} = qw (%-40s %12s %12s %12s %12s %12s %12s %12s %13s);
 
 my $cpm = sub { my ($v, $s) = @_; return &colored ($s, $v > 0. ? 'red' : 'green') };
 
