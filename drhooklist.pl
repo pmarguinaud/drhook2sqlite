@@ -59,8 +59,8 @@ $sth->execute ();
 
 my @FLD = ('Name', @key);
 my (%FMT, %HDR);
-@FMT{@FLD} = ('%-40s', ('%12.5f') x scalar (@key));
-@HDR{@FLD} = ('%-40s', ('%12s') x scalar (@key));
+@FMT{@FLD} = ('%-50s', ('%12.5f') x scalar (@key));
+@HDR{@FLD} = ('%-50s', ('%12s') x scalar (@key));
 
 if ($opts{format} eq 'text')
   {
@@ -121,6 +121,20 @@ elsif ($opts{format} eq 'csv')
             my $str = sprintf ($FMT{$FLD}, $h->{$FLD});
             $str =~ s/(?:^\s*|\s*$)//go;
             $str = "$str;";
+            print $str;
+            printf ("\n") if ($i == $#FLD);
+          }
+      }
+  }
+elsif ($opts{format} eq 'gnuplot')
+  {
+    while (my $h = $sth->fetchrow_hashref ())
+      {
+        for my $i (0 .. $#FLD)
+          {
+            my $FLD = $FLD[$i];
+            (my $fld = $h->{$FLD}) =~ s/_/\\\\_/go;
+            my $str = sprintf ($FMT{$FLD}, $fld);
             print $str;
             printf ("\n") if ($i == $#FLD);
           }
