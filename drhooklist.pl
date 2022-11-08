@@ -5,6 +5,7 @@ use DBD::SQLite;
 use Data::Dumper;
 use FileHandle;
 use Term::ANSIColor;
+use File::Basename;
 use Getopt::Long;
 
 use warnings qw (FATAL all);
@@ -128,6 +129,23 @@ elsif ($opts{format} eq 'csv')
   }
 elsif ($opts{format} eq 'gnuplot')
   {
+    print << "EOG";
+set terminal postscript eps enhanced color solid font "Courrier 14 Bold" linewidth 2
+set output "drhook.eps"
+
+set grid
+
+set ylabel "Time (s)"
+
+set style data histogram
+set style histogram cluster
+set style fill solid border -1
+set xtic rotate by -90 scale 0
+
+
+\$data << EOF
+EOG
+
     while (my $h = $sth->fetchrow_hashref ())
       {
         for my $i (0 .. $#FLD)
@@ -139,4 +157,31 @@ elsif ($opts{format} eq 'gnuplot')
             printf ("\n") if ($i == $#FLD);
           }
       }
+
+    print << "EOG";
+EOF
+
+plot \\
+EOG
+
+    my @col = qw (blue white red green pink orange purple);
+
+    for my $i (@i)
+      {
+        my $j = 2 + $i;
+        (my $t = &basename ($db[$i])) =~ s/_/\\\\_/go;
+        my $col = $col[$i % scalar (@col)];
+        if ($i == $i[0])
+          {
+            print "\"\$data\" using $j:xtic(1) ti \"$t\" lc \"$col\"";
+          }
+        else
+          {
+            print "\"\$data\" using $j ti \"$t\" lc \"$col\"";
+          }
+        print ",\\" if ($i != $i[-1]);
+        print "\n";
+      }
+
+
   }
