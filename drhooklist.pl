@@ -29,6 +29,8 @@ $dbh->{RaiseError} = 1;
 
 
 my @i = (0 .. $#db);
+my $n = scalar (@i);
+
 my @dn = map { "db$_" } @i;
 my %dn;
 @dn{@db} = @dn;
@@ -142,7 +144,18 @@ set style histogram cluster
 set style fill solid border -1
 set xtic rotate by -90 scale 0
 
+array titles[$n]
 
+EOG
+
+    for my $i (@i)
+      {
+        (my $t = &basename ($db[$i])) =~ s/_/\\\\_/go;
+        my $i1 = $i + 1;
+        print "titles[$i1] = \"$t\"\n";
+      }
+
+    print << "EOG";
 \$data << EOF
 EOG
 
@@ -168,16 +181,16 @@ EOG
 
     for my $i (@i)
       {
-        my $j = 2 + $i;
-        (my $t = &basename ($db[$i])) =~ s/_/\\\\_/go;
+        my $i1 = $i + 1;
+        my $i2 = $i + 2;
         my $col = $col[$i % scalar (@col)];
         if ($i == $i[0])
           {
-            print "\"\$data\" using $j:xtic(1) ti \"$t\" lc \"$col\"";
+            print "\"\$data\" using $i2:xtic(1) ti titles[$i1] lc \"$col\"";
           }
         else
           {
-            print "\"\$data\" using $j ti \"$t\" lc \"$col\"";
+            print "\"\$data\" using $i2 ti titles[$i1] lc \"$col\"";
           }
         print ",\\" if ($i != $i[-1]);
         print "\n";
