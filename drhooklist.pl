@@ -41,20 +41,27 @@ for my $db (@db)
     $dbh->do ("ATTACH \"$db\" AS $dn{$db};");
   }
 
-my $MATCH = $opts{match} ? "AND (db1.DrHookTime_Merge$opts{kind}.Name REGEXP '$opts{match}')" : "";
-my $WHERE = $opts{where} ? "AND ($opts{where})" : "";
+
+my $WHERE1 = @i < 2 ? "" :
+    '('. join (' OR ', map ({ my $i = $_; map ({ my $j = $_; "$dn[$i].DrHookTime_Merge$opts{kind}.Avg != "
+                                                           . "$dn[$j].DrHookTime_Merge$opts{kind}.Avg" } (0 .. $i-1)) } @i)) . ')'
+  . ' AND '
+  . '(' . join (' AND ', map ({ "$dn[$_].DrHookTime_Merge$opts{kind}.Name = "
+                              . "$dn[$_+1].DrHookTime_Merge$opts{kind}.Name" } @i[0..$#i-1])) . ')';
+
+my $WHERE2 = $opts{where} ? "($opts{where})" : "";
+my $MATCH = $opts{match} ? "(db0.DrHookTime_Merge$opts{kind}.Name REGEXP '$opts{match}')" : "";
+
+my $WHERE = join (' AND ', grep { $_ } ($WHERE1, $WHERE2, $MATCH));
+$WHERE = "WHERE $WHERE" if ($WHERE);
 
 my $query = "SELECT db0.DrHookTime_Merge$opts{kind}.Name AS Name, "
   . join (', ', map ({ "$dn[$_].DrHookTime_Merge$opts{kind}.avg AS $key[$_]" } @i))
   . " FROM " . join (', ', map ({ "$dn[$_].DrHookTime_Merge$opts{kind}" } @i))
-  . " WHERE " 
-  . '('. join (' OR ', map ({ my $i = $_; map ({ my $j = $_; "$dn[$i].DrHookTime_Merge$opts{kind}.Avg != "
-                                                           . "$dn[$j].DrHookTime_Merge$opts{kind}.Avg" } (0 .. $i-1)) } @i)) . ')'
-  . " AND "
-  . '(' . join (' AND ', map ({ "$dn[$_].DrHookTime_Merge$opts{kind}.Name = "
-                              . "$dn[$_+1].DrHookTime_Merge$opts{kind}.Name" } @i[0..$#i-1])) . ')'
-  . " $MATCH $WHERE ORDER BY $opts{order} LIMIT $opts{limit};";
+  . " $WHERE ORDER BY $opts{order} LIMIT $opts{limit};";
 
+
+print $query, "\n";
 
 my $sth = $dbh->prepare ($query);
 
