@@ -13,13 +13,31 @@ use strict;
 
 my $tty = -t STDOUT;
 
+my @opts_f = qw (help);
 my @opts_s = qw (kind limit match where format order);
 my %opts = qw (kind Self limit 1000 format text order Name);
 
 &GetOptions
 (
   map ({ ("$_=s", \$opts{$_}) } @opts_s),
+  map ({ ($_, \$opts{$_}) } @opts_f),
 );
+
+if ($opts{help})
+  {
+    use File::Basename;
+    print "Usage: ", &basename ($0), "\n";
+    for (@opts_f)
+      {
+        printf ("  --$_\n");
+      }
+    for (@opts_s)
+      {
+        printf ("  --$_=...\n");
+      }
+    print " drhook1.db drhook2.db ...\n";
+    exit (0);
+  }
 
 my @db = @ARGV;
 
@@ -61,7 +79,7 @@ my $query = "SELECT db0.DrHookTime_Merge$opts{kind}.Name AS Name, "
   . " $WHERE ORDER BY $opts{order} LIMIT $opts{limit};";
 
 
-print $query, "\n";
+#print $query, "\n";
 
 my $sth = $dbh->prepare ($query);
 

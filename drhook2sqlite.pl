@@ -85,12 +85,30 @@ sub drHook2SQLite
 
 }
 
+my @opts_f = qw (help);
 my @opts_s = qw (only);
 
 &GetOptions
 (
   map ({ ("$_=s", \$opts{$_}) } @opts_s),
+  map ({ ($_, \$opts{$_}) } @opts_f),
 );
+
+if ($opts{help})
+  {
+    use File::Basename;
+    print "Usage: ", &basename ($0), "\n";
+    for (@opts_f)
+      {
+        printf ("  --$_\n");
+      }
+    for (@opts_s)
+      {
+        printf ("  --$_=...\n");
+      }
+    print " drhook.db [directory | drhook.prof.*]\n";
+    exit (0);
+  }
 
 if ($opts{only})
   {
