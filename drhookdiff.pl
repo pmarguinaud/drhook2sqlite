@@ -34,6 +34,7 @@ my $MATCH2 = $opts{match} ? "AND (db2.DrHookTime_Merge$opts{kind}.Name REGEXP '$
 my $WHERE  = $opts{where} ? "AND ($opts{where})" : "";
 
 my $query12 = "SELECT 
+              '~'                                                                          AS Status,
               db1.DrHookTime_Merge$opts{kind}.Name                                         AS Name, 
               db1.DrHookTime_Merge$opts{kind}.Avg                                          AS Avg1, 
               db2.DrHookTime_Merge$opts{kind}.Avg                                          AS Avg2,
@@ -53,6 +54,7 @@ my $query12 = "SELECT
             ORDER BY ABS (db1.DrHookTime_Merge$opts{kind}.Avg-db2.DrHookTime_Merge$opts{kind}.Avg) DESC LIMIT $opts{limit};";
 
 my $query1  = "SELECT 
+              '-'                                                                          AS Status,
               db1.DrHookTime_Merge$opts{kind}.Name                                         AS Name, 
               db1.DrHookTime_Merge$opts{kind}.Avg                                          AS Avg1, 
               0.                                                                           AS Avg2,
@@ -69,6 +71,7 @@ my $query1  = "SELECT
             ORDER BY ABS (db1.DrHookTime_Merge$opts{kind}.Avg) DESC LIMIT $opts{limit};";
 
 my $query2  = "SELECT 
+              '+'                                                                          AS Status,
               db2.DrHookTime_Merge$opts{kind}.Name                                         AS Name, 
               0.                                                                           AS Avg1, 
               db2.DrHookTime_Merge$opts{kind}.Avg                                          AS Avg2,
@@ -84,10 +87,10 @@ my $query2  = "SELECT
               $MATCH1 $WHERE
             ORDER BY ABS (db2.DrHookTime_Merge$opts{kind}.Avg) DESC LIMIT $opts{limit};";
 
-my @FLD = qw (Name Avg1 Min1 Max1 Avg2 Min2 Max2 AvgDiff AvgIncr);
+my @FLD = qw (Status Name Avg1 Min1 Max1 Avg2 Min2 Max2 AvgDiff AvgIncr);
 my (%FMT, %HDR);
-@FMT{@FLD} = (qw (%-40s %12.5f %12.5f %12.5f %12.5f %12.5f %12.5f %+12.5f), '%+12.5f%%');
-@HDR{@FLD} = qw (%-40s %12s %12s %12s %12s %12s %12s %12s %13s);
+@FMT{@FLD} = (qw (%-6s %-40s %12.5f %12.5f %12.5f %12.5f %12.5f %12.5f %+12.5f), '%+12.5f%%');
+@HDR{@FLD} = qw (%6s %-40s %12s %12s %12s %12s %12s %12s %12s %13s);
 
 my $cpm = sub { my ($v, $s) = @_; return &colored ($s, $v > 0. ? 'red' : 'green') };
 
