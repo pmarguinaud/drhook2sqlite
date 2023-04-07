@@ -29,10 +29,11 @@ $dbh->{RaiseError} = 1;
 $dbh->do ("ATTACH \"$db1\" AS db1;");
 $dbh->do ("ATTACH \"$db2\" AS db2;");
 
-my $MATCH = $opts{match} ? "AND (db1.DrHookTime_Merge$opts{kind}.Name REGEXP '$opts{match}')" : "";
-my $WHERE = $opts{where} ? "AND ($opts{where})" : "";
+my $MATCH1 = $opts{match} ? "AND (db1.DrHookTime_Merge$opts{kind}.Name REGEXP '$opts{match}')" : "";
+my $MATCH2 = $opts{match} ? "AND (db2.DrHookTime_Merge$opts{kind}.Name REGEXP '$opts{match}')" : "";
+my $WHERE  = $opts{where} ? "AND ($opts{where})" : "";
 
-my $query = "SELECT 
+my $query12 = "SELECT 
               db1.DrHookTime_Merge$opts{kind}.Name                                         AS Name, 
               db1.DrHookTime_Merge$opts{kind}.Avg                                          AS Avg1, 
               db2.DrHookTime_Merge$opts{kind}.Avg                                          AS Avg2,
@@ -48,12 +49,40 @@ my $query = "SELECT
               db1.DrHookTime_Merge$opts{kind}, db2.DrHookTime_Merge$opts{kind} 
             WHERE (db1.DrHookTime_Merge$opts{kind}.Name = db2.DrHookTime_Merge$opts{kind}.Name)
               AND (db2.DrHookTime_Merge$opts{kind}.Avg != db1.DrHookTime_Merge$opts{kind}.Avg )
-              $MATCH $WHERE
+              $MATCH1 $WHERE
             ORDER BY ABS (db1.DrHookTime_Merge$opts{kind}.Avg-db2.DrHookTime_Merge$opts{kind}.Avg) DESC LIMIT $opts{limit};";
 
-my $sth = $dbh->prepare ($query);
+my $query1  = "SELECT 
+              db1.DrHookTime_Merge$opts{kind}.Name                                         AS Name, 
+              db1.DrHookTime_Merge$opts{kind}.Avg                                          AS Avg1, 
+              0.                                                                           AS Avg2,
+              db1.DrHookTime_Merge$opts{kind}.Min                                          AS Min1, 
+              0.                                                                           AS Min2,
+              db1.DrHookTime_Merge$opts{kind}.Max                                          AS Max1, 
+              0.                                                                           AS Max2,
+              0.                                  - db1.DrHookTime_Merge$opts{kind}.Avg    AS AvgDiff,
+              0.                                                                           AS AvgIncr
+            FROM 
+              db1.DrHookTime_Merge$opts{kind}
+            WHERE (db1.DrHookTime_Merge$opts{kind}.Name NOT IN (SELECT Name FROM db2.DrHookTime_Merge$opts{kind}))
+              $MATCH1 $WHERE
+            ORDER BY ABS (db1.DrHookTime_Merge$opts{kind}.Avg) DESC LIMIT $opts{limit};";
 
-$sth->execute ();
+my $query2  = "SELECT 
+              db2.DrHookTime_Merge$opts{kind}.Name                                         AS Name, 
+              0.                                                                           AS Avg1, 
+              db2.DrHookTime_Merge$opts{kind}.Avg                                          AS Avg2,
+              0.                                                                           AS Min1, 
+              db2.DrHookTime_Merge$opts{kind}.Min                                          AS Min2,
+              0.                                                                           AS Max1, 
+              db2.DrHookTime_Merge$opts{kind}.Max                                          AS Max2,
+              db2.DrHookTime_Merge$opts{kind}.Avg - 0.                                     AS AvgDiff,
+              0.                                                                           AS AvgIncr
+            FROM 
+              db2.DrHookTime_Merge$opts{kind}
+            WHERE (db2.DrHookTime_Merge$opts{kind}.Name NOT IN (SELECT Name FROM db1.DrHookTime_Merge$opts{kind}))
+              $MATCH1 $WHERE
+            ORDER BY ABS (db2.DrHookTime_Merge$opts{kind}.Avg) DESC LIMIT $opts{limit};";
 
 my @FLD = qw (Name Avg1 Min1 Max1 Avg2 Min2 Max2 AvgDiff AvgIncr);
 my (%FMT, %HDR);
@@ -64,7 +93,6 @@ my $cpm = sub { my ($v, $s) = @_; return &colored ($s, $v > 0. ? 'red' : 'green'
 
 my %COL = (AvgDiff => $cpm, AvgIncr => $cpm);
 
-
 for my $i (0 .. $#FLD)
   {
     my $FLD = $FLD[$i];
@@ -74,15 +102,21 @@ for my $i (0 .. $#FLD)
     printf (" |\n") if ($i == $#FLD);
   }
 
-while (my $h = $sth->fetchrow_hashref ())
+for my $query ($query12, $query1, $query2)
   {
-    for my $i (0 .. $#FLD)
+    my $sth = $dbh->prepare ($query);
+    $sth->execute ();
+    
+    while (my $h = $sth->fetchrow_hashref ())
       {
-        my $FLD = $FLD[$i];
-        my $str = sprintf ("$FMT{$FLD}", $h->{$FLD});
-        $str = $tty && $COL{$FLD} ? $COL{$FLD}->($h->{$FLD}, $str) : $str;
-        $str = " | $str";
-        print $str;
-        printf (" |\n") if ($i == $#FLD);
+        for my $i (0 .. $#FLD)
+          {
+            my $FLD = $FLD[$i];
+            my $str = sprintf ("$FMT{$FLD}", $h->{$FLD});
+            $str = $tty && $COL{$FLD} ? $COL{$FLD}->($h->{$FLD}, $str) : $str;
+            $str = " | $str";
+            print $str;
+            printf (" |\n") if ($i == $#FLD);
+          }
       }
   }
