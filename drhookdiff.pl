@@ -84,7 +84,7 @@ my $query2  = "SELECT
             FROM 
               db2.DrHookTime_Merge$opts{kind}
             WHERE (db2.DrHookTime_Merge$opts{kind}.Name NOT IN (SELECT Name FROM db1.DrHookTime_Merge$opts{kind}))
-              $MATCH1 $WHERE
+              $MATCH2 $WHERE
             ORDER BY ABS (db2.DrHookTime_Merge$opts{kind}.Avg) DESC LIMIT $opts{limit};";
 
 my @FLD = qw (Status Name Avg1 Min1 Max1 Avg2 Min2 Max2 AvgDiff AvgIncr);

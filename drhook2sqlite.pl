@@ -38,9 +38,17 @@ sub drHook2SQLite
   my ($f, $dbh) = @_;
 
   my @line = do { my $fh = 'FileHandle'->new ("<$f"); <$fh> };
-  shift (@line) for (1 .. 6);
+  my ($Program) = (shift (@line) =~ m/Profiling information for program='(.*?)'/o);
+  shift (@line) for (1 .. 4);
+  my ($Heap, $RSS, $Stack) = (shift (@line) =~ m/Memory usage\s*:\s*(\d+)\s* MB \(heap\),\s*(\d+)\s* MB \(rss\),\s*(\d+)\s* MB \(stack\)/o);
   my ($Wall_main, $Task, $Procs, $Threads) = (shift (@line) =~ m/Wall-time is\s+(\S+) sec on proc#(\d+) \((\d+) procs, (\d+) threads\)/o);
-  
+
+  my $set;
+  $set = $dbh->prepare ("INSERT INTO DrHookInfo (Task, Program, Wall, Threads, "
+                      . "Heap, RSS, Stack) VALUES (?, ?, ?, ?, ?, ?, ?)");
+
+  $set->execute ($Task, $Program, $Wall_main, $Threads, $Heap, $RSS, $Stack);
+
   my @Wall_threads;
   for (1 .. $Threads)
     {
@@ -55,9 +63,9 @@ sub drHook2SQLite
   shift (@line) for (1 .. 2);
 
 
-  my $set = $dbh->prepare ("INSERT INTO DrHookTime (Rank, Time, Cumul, Self, Total, "
-                         . "Calls, SelfPerCall, TotalPerCall, Name, Thread, Task) "
-                         . "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+  $set = $dbh->prepare ("INSERT INTO DrHookTime (Rank, Time, Cumul, Self, Total, "
+                      . "Calls, SelfPerCall, TotalPerCall, Name, Thread, Task) "
+                      . "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
 
   for my $line (@line)
     {
@@ -136,6 +144,18 @@ unlink ($db);
 my $dbh = 'DBI'->connect ("DBI:SQLite:$db", '', '', {RaiseError => 1})
   or die ($DBI::errstr);
 $dbh->{RaiseError} = 1;
+
+$dbh->prepare (<< "EOF")->execute (); 
+CREATE TABLE DrHookInfo 
+   (Task            INT           NOT NULL, 
+    Program         VARCHAR (255) NOT NULL,
+    Wall            FLOAT         NOT NULL,
+    Threads         INT           NOT NULL,
+    Heap            INT           NOT NULL,
+    RSS             INT           NOT NULL,
+    Stack           INT           NOT NULL,
+    PRIMARY KEY (Task))
+EOF
 
 $dbh->prepare (<< "EOF")->execute (); 
 CREATE TABLE DrHookTime 
