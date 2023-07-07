@@ -93,7 +93,7 @@ sub drHook2SQLite
 
 }
 
-my @opts_f = qw (help);
+my @opts_f = qw (help primary);
 my @opts_s = qw (only);
 
 &GetOptions
@@ -157,6 +157,8 @@ CREATE TABLE DrHookInfo
     PRIMARY KEY (Task))
 EOF
 
+my $primary = $opts{primary} ? ", PRIMARY KEY (Name, Thread, Task)" : "";
+
 $dbh->prepare (<< "EOF")->execute (); 
 CREATE TABLE DrHookTime 
    (Rank            INT           NOT NULL, 
@@ -169,8 +171,8 @@ CREATE TABLE DrHookTime
     TotalPerCall    FLOAT         NOT NULL,
     Name            VARCHAR (255) NOT NULL,
     Thread          INT           NOT NULL,
-    Task            INT           NOT NULL,
-    PRIMARY KEY (Name, Thread, Task))
+    Task            INT           NOT NULL 
+    $primary)
 EOF
 
 $dbh->prepare ("BEGIN TRANSACTION")->execute ();
@@ -182,7 +184,7 @@ for my $f (@drhook)
 
 $dbh->prepare ("COMMIT")->execute ();
 
-$dbh->prepare ("CREATE INDEX DrHookTimeIdx ON DrHookTime (Name, Thread, Task);")->execute ();
+$dbh->prepare ("CREATE UNIQUE INDEX DrHookTimeIdx ON DrHookTime (Name, Thread, Task);")->execute ();
 
 
 # Per calls figures have too few digits

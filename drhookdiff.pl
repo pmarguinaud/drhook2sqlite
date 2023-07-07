@@ -33,8 +33,8 @@ my $MATCH1 = $opts{match} ? "AND (db1.DrHookTime_Merge$opts{kind}.Name REGEXP '$
 my $MATCH2 = $opts{match} ? "AND (db2.DrHookTime_Merge$opts{kind}.Name REGEXP '$opts{match}')" : "";
 my $WHERE  = $opts{where} ? "AND ($opts{where})" : "";
 
-my $query12 = "SELECT 
-              '~'                                                                          AS Status,
+my $query12 = "CREATE TEMP VIEW VIEW12 AS SELECT 
+              '      '                                                                     AS Status,
               db1.DrHookTime_Merge$opts{kind}.Name                                         AS Name, 
               db1.DrHookTime_Merge$opts{kind}.Avg                                          AS Avg1, 
               db2.DrHookTime_Merge$opts{kind}.Avg                                          AS Avg2,
@@ -50,11 +50,10 @@ my $query12 = "SELECT
               db1.DrHookTime_Merge$opts{kind}, db2.DrHookTime_Merge$opts{kind} 
             WHERE (db1.DrHookTime_Merge$opts{kind}.Name = db2.DrHookTime_Merge$opts{kind}.Name)
               AND (db2.DrHookTime_Merge$opts{kind}.Avg != db1.DrHookTime_Merge$opts{kind}.Avg )
-              $MATCH1 $WHERE
-            ORDER BY ABS (db1.DrHookTime_Merge$opts{kind}.Avg-db2.DrHookTime_Merge$opts{kind}.Avg) DESC LIMIT $opts{limit};";
+              $MATCH1 $WHERE";
 
-my $query1  = "SELECT 
-              '-'                                                                          AS Status,
+my $query1  = "CREATE TEMP VIEW VIEW1 AS SELECT 
+              '------'                                                                     AS Status,
               db1.DrHookTime_Merge$opts{kind}.Name                                         AS Name, 
               db1.DrHookTime_Merge$opts{kind}.Avg                                          AS Avg1, 
               0.                                                                           AS Avg2,
@@ -67,11 +66,10 @@ my $query1  = "SELECT
             FROM 
               db1.DrHookTime_Merge$opts{kind}
             WHERE (db1.DrHookTime_Merge$opts{kind}.Name NOT IN (SELECT Name FROM db2.DrHookTime_Merge$opts{kind}))
-              $MATCH1 $WHERE
-            ORDER BY ABS (db1.DrHookTime_Merge$opts{kind}.Avg) DESC LIMIT $opts{limit};";
+              $MATCH1 $WHERE";
 
-my $query2  = "SELECT 
-              '+'                                                                          AS Status,
+my $query2  = "CREATE TEMP VIEW VIEW2 AS SELECT 
+              '++++++'                                                                     AS Status,
               db2.DrHookTime_Merge$opts{kind}.Name                                         AS Name, 
               0.                                                                           AS Avg1, 
               db2.DrHookTime_Merge$opts{kind}.Avg                                          AS Avg2,
@@ -84,17 +82,31 @@ my $query2  = "SELECT
             FROM 
               db2.DrHookTime_Merge$opts{kind}
             WHERE (db2.DrHookTime_Merge$opts{kind}.Name NOT IN (SELECT Name FROM db1.DrHookTime_Merge$opts{kind}))
-              $MATCH2 $WHERE
-            ORDER BY ABS (db2.DrHookTime_Merge$opts{kind}.Avg) DESC LIMIT $opts{limit};";
+              $MATCH2 $WHERE";
+
+for my $query ($query12, $query1, $query2)
+  {
+    my $sth = $dbh->prepare ($query);
+    $sth->execute ();
+  }
+
+my $cpm = sub { my ($v, $s) = @_; return &colored ($s, $v > 0. ? 'red' : 'green') };
 
 my @FLD = qw (Status Name Avg1 Min1 Max1 Avg2 Min2 Max2 AvgDiff AvgIncr);
 my (%FMT, %HDR);
 @FMT{@FLD} = (qw (%-6s %-40s %12.5f %12.5f %12.5f %12.5f %12.5f %12.5f %+12.5f), '%+12.5f%%');
 @HDR{@FLD} = qw (%6s %-40s %12s %12s %12s %12s %12s %12s %12s %13s);
 
-my $cpm = sub { my ($v, $s) = @_; return &colored ($s, $v > 0. ? 'red' : 'green') };
-
 my %COL = (AvgDiff => $cpm, AvgIncr => $cpm);
+
+my $sth = $dbh->prepare ("SELECT MAX (LENGTH (Name)) FROM (SELECT * FROM VIEW12 UNION SELECT * FROM VIEW1 UNION SELECT * FROM VIEW2) ORDER BY ABS (Avg1-Avg2) DESC LIMIT $opts{limit};");
+$sth->execute ();
+my ($maxlength) = $sth->fetchrow_array ();
+
+$HDR{Name} = $FMT{Name} = '%-' . $maxlength . 's';
+
+$sth = $dbh->prepare ("SELECT * FROM (SELECT * FROM VIEW12 UNION SELECT * FROM VIEW1 UNION SELECT * FROM VIEW2) ORDER BY ABS (Avg1-Avg2) DESC LIMIT $opts{limit};");
+$sth->execute ();
 
 for my $i (0 .. $#FLD)
   {
@@ -105,21 +117,15 @@ for my $i (0 .. $#FLD)
     printf (" |\n") if ($i == $#FLD);
   }
 
-for my $query ($query12, $query1, $query2)
+while (my $h = $sth->fetchrow_hashref ())
   {
-    my $sth = $dbh->prepare ($query);
-    $sth->execute ();
-    
-    while (my $h = $sth->fetchrow_hashref ())
+    for my $i (0 .. $#FLD)
       {
-        for my $i (0 .. $#FLD)
-          {
-            my $FLD = $FLD[$i];
-            my $str = sprintf ("$FMT{$FLD}", $h->{$FLD});
-            $str = $tty && $COL{$FLD} ? $COL{$FLD}->($h->{$FLD}, $str) : $str;
-            $str = " | $str";
-            print $str;
-            printf (" |\n") if ($i == $#FLD);
-          }
+        my $FLD = $FLD[$i];
+        my $str = sprintf ("$FMT{$FLD}", $h->{$FLD});
+        $str = $tty && $COL{$FLD} ? $COL{$FLD}->($h->{$FLD}, $str) : $str;
+        $str = " | $str";
+        print $str;
+        printf (" |\n") if ($i == $#FLD);
       }
   }
